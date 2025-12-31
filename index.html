@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KCA競泳スタート合図タイマー</title>
+    
+    <!-- iOS PWA 設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="SWIMMING PRACTICE CLOCK">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        /* 上部表示 */
+        .top-info {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+        
+        .info-item {
+            text-align: center;
+        }
+        
+        .info-label {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .info-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2b2f8f;
+        }
+        
+        /* 文字盤エリア */
+        .clock-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 20px;
+        }
+        
+        /* 文字盤コンテナ */
+        .clock-container {
+            position: relative;
+            width: 360px;
+            height: 360px;
+            flex-shrink: 0;
+        }
+        
+        .dial-wrap {
+            display: inline-block;
+            position: relative;
+        }
+        
+        /* 針 */
+        .hands-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 360px;
+            height: 360px;
+            pointer-events: none;
+        }
+        
+        .hand {
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            transform-origin: bottom center;
+
+        }
+        
+        .minute-hand {
+            width: 6px;
+            height: 100px;
+            background: #333;
+            margin-left: -3px;
+            border-radius: 3px;
+        }
+        
+        .second-hand {
+            width: 4px;
+            height: 130px;
+            background: #ff1744;
+            margin-left: -2px;
+            border-radius: 2px;
+        }
+        .counter {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 360px;
+        }
+        
+        .counter-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .counter-current {
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff1744;
+            line-height: 1;
+            padding: 8px 60px;
+            border: 3px solid #ff1744;
+            border-radius: 8px;
+            display: inline-block;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .counter-total {
+            font-size: 16px;
+            color: #999;
+            font-weight: 500;
+        }
+        
+        /* カウントダウン枠 */
+        .countdown-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .countdown-item {
+            text-align: center;
+        }
+        
+        .countdown-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .countdown-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2b2f8f;
+            padding: 8px 12px;
+            border: 2px solid #2b2f8f;
+            border-radius: 8px;
+            background: white;
+            height: 40px;
+            line-height: 24px;
+        }
+        
+        /* ボタン */
+        .button-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .btn {
+            padding: 18px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-blue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .btn-blue:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        
+        .btn-green {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+        }
+        
+        .btn-red {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        }
+        
+        .btn-red:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        
+        .btn-gray {
+            background: #999;
+        }
+        
+        .btn-gray:active {
+            transform: scale(0.95);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* 設定パネル */
+        .settings {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .settings-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        
+        .setting-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .setting-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        input[type="number"],
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .minute-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: bold;
+            color: #2b2f8f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 上部表示 -->
+        <div class="top-info">
+            <div class="info-item">
+                <div class="info-label">サイクル</div>
+                <div class="info-value" id="displayCycle">0:40</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">組数</div>
+                <div class="info-value" id="displaySwimmers">3</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">間隔</div>
+                <div class="info-value" id="displayInterval">5秒</div>
+            </div>
+        </div>
+        
+        <!-- 文字盤と本数 -->
+        <div class="clock-section">
+            <!-- 文字盤 -->
+            <div class="clock-container">
+                <div class="dial-wrap">
+                    <svg id="dial" viewBox="0 0 400 400" width="360" height="360" aria-label="60 seconds dial"></svg>
+                    <div class="hands-container">
+                        <div class="hand minute-hand" id="minuteHand"></div>
+                        <div class="hand second-hand" id="secondHand"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 残り本数 -->
+            <div class="counter">
+                <div class="counter-label">残り本数</div>
+                <div class="counter-current" id="currentSet">-</div>
+                <div class="counter-total" id="totalSets">/ -</div>
+            </div>
+        </div>
+        
+        <!-- カウントダウン枠 -->
+        <div class="countdown-section">
+            <div class="countdown-item">
+                <div class="countdown-label">次のスタートまで</div>
+                <div class="countdown-value" id="nextStart">--</div>
+            </div>
+            <div class="countdown-item">
+                <div class="countdown-label">メニュー開始まで</div>
+                <div class="countdown-value" id="menuStart">--</div>
+            </div>
+        </div>
+        
+        <!-- ボタン -->
+        <div class="button-row">
+            <button class="btn btn-blue" id="syncBtn">秒針スタート</button>
+            <button class="btn btn-red" id="startBtn" disabled>メニュー開始</button>
+        </div>
+
+        
+        <!-- 保存済みメニュー -->
+        <div id="savedMenusContainer" style="margin: 20px 0; display: none;">
+            <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333;">💾 保存済みメニュー</div>
+            <div id="savedMenusList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+        </div>
+        
+        <!-- 設定 -->
+        <div class="settings" id="settings">
+            <div class="settings-title">⚙️ 設定</div>
+            
+            <div class="setting-group">
+                <label class="setting-label">分針位置（0-59分）</label>
+                <div class="setting-row">
+                    <input type="range" id="minuteSlider" min="0" max="59" value="0">
+                    <span class="minute-value" id="minuteValue">0</span>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">サークル</label>
+                <div class="setting-row">
+                    <input type="number" id="cycleMins" min="0" max="10" value="0" style="width:70px"> 分
+                    <select id="cycleSecs" style="width:80px">
+                        <option value="0">0</option>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                        <option value="30">30</option>
+                        <option value="35">35</option>
+                        <option value="40" selected>40</option>
+                        <option value="45">45</option>
+                        <option value="50">50</option>
+                        <option value="55">55</option>
+                    </select> 秒
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">組数（人数）</label>
+                <input type="number" id="swimmers" min="1" max="10" value="3" style="width:100%">
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">間隔（秒）</label>
+                <select id="interval" style="width:100%">
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="25">25</option>
+                    <option value="30">30</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">本数</label>
+                <input type="number" id="sets" min="1" max="20" value="5" style="width:100%">
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">音声設定</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                        <input type="checkbox" id="voice10sec" checked style="width:18px; height:18px;">
+                        <span>10秒前コール</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                        <input type="checkbox" id="voice5sec" checked style="width:18px; height:18px;">
+                        <span>5秒前コール</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                        <input type="checkbox" id="voiceSetNumber" checked style="width:18px; height:18px;">
+                        <span>本数コール</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                <button id="saveMenuBtn" class="btn btn-green" style="width: 100%; padding: 12px; font-size: 14px;">
+                    💾 現在の設定を保存
+                </button>
+            </div>
+
+        </div>
+    </div>
+    
+    <script>
+        // ========================================
+        // 文字盤SVG描画（よしひこさん提供コード・四角枠あり・フォントサイズ16）
+        // ========================================
+        (() => {
+            const svg = document.getElementById("dial");
+            const NS = "http://www.w3.org/2000/svg";
+
+            const W = 400, H = 400;
+            const cx = 200, cy = 200;
+
+            // theme
+            const borderColor = "#2b2f8f";
+            const blue = "#2b2f8f";
+            const red  = "#d02626";
+            const bg   = "#ffffff";
+
+            // background rounded rect（四角枠あり）
+//             const rect = document.createElementNS(NS, "rect");
+//             rect.setAttribute("x", "18");
+//             rect.setAttribute("y", "18");
+//             rect.setAttribute("width", "364");
+//             rect.setAttribute("height", "364");
+//             rect.setAttribute("rx", "24");
+//             rect.setAttribute("fill", bg);
+//             rect.setAttribute("stroke", borderColor);
+//             rect.setAttribute("stroke-width", "10");
+//             svg.appendChild(rect);
+
+            // ticks group
+            const gTicks = document.createElementNS(NS, "g");
+            svg.appendChild(gTicks);
+
+            // circle radii
+            const rOuter = 150;
+            const rInnerMinor = 138;
+            const rInnerMajor = 126;
+
+            // 60 ticks (0..59)
+            for (let i = 0; i < 60; i++) {
+                const isMajor = (i % 5 === 0);
+                const a = (-90 + i * 6) * Math.PI / 180;
+
+                const x1 = cx + Math.cos(a) * rOuter;
+                const y1 = cy + Math.sin(a) * rOuter;
+                const x2 = cx + Math.cos(a) * (isMajor ? rInnerMajor : rInnerMinor);
+                const y2 = cy + Math.sin(a) * (isMajor ? rInnerMajor : rInnerMinor);
+
+                const line = document.createElementNS(NS, "line");
+                line.setAttribute("x1", x1);
+                line.setAttribute("y1", y1);
+                line.setAttribute("x2", x2);
+                line.setAttribute("y2", y2);
+                line.setAttribute("stroke", blue);
+                line.setAttribute("stroke-linecap", "round");
+                line.setAttribute("stroke-width", isMajor ? "6" : "3");
+                gTicks.appendChild(line);
+            }
+
+            // numbers (5,10,...,60) - フォントサイズ16に設定
+            const gNums = document.createElementNS(NS, "g");
+            svg.appendChild(gNums);
+
+            const rNum = 105;
+            const labels = [60,5,10,15,20,25,30,35,40,45,50,55];
+
+            labels.forEach((v) => {
+                const sec = (v === 60) ? 0 : v;
+                const a = (-90 + sec * 6) * Math.PI / 180;
+
+                const tx = cx + Math.cos(a) * rNum;
+                const ty = cy + Math.sin(a) * rNum;
+
+                const t = document.createElementNS(NS, "text");
+                t.setAttribute("x", tx);
+                t.setAttribute("y", ty);
+                t.setAttribute("text-anchor", "middle");
+                t.setAttribute("dominant-baseline", "central");
+                t.setAttribute("font-size", "18");
+                t.setAttribute("font-weight", "800");
+                t.setAttribute("font-family", "system-ui, -apple-system, Segoe UI, Roboto, sans-serif");
+
+                const isRed = (v % 10 !== 0);
+                t.setAttribute("fill", isRed ? red : blue);
+                t.textContent = String(v);
+
+                gNums.appendChild(t);
+            });
+
+            // center dot
+            const dot = document.createElementNS(NS, "circle");
+            dot.setAttribute("cx", cx);
+            dot.setAttribute("cy", cy);
+            dot.setAttribute("r", "9");
+            dot.setAttribute("fill", "#111");
+            svg.appendChild(dot);
+        })();
+        
+        // ========================================
+        // グローバルAudioContext（iOS Safari用）
+        // ========================================
+        let globalAudioContext = null;
+        
+        // ========================================
+        // グローバル状態
+        // ========================================
+        const state = {
+            clockRunning: false,
+            clockStartMs: 0,
+            tickRunning: false,
+            menuRunning: false,
+            menuWaiting: false,
+            menuStartElapsed: 0,
+            events: [],
+            minutePosition: 0,
+            cycleTime: 0,
+            timerIds: []  // タイマーID管理
+        };
+        
+        // ========================================
+        // 要素参照
+        // ========================================
+        const elements = {};
+        
+        // ========================================
+        // 初期化
+        // ========================================
+        function initialize() {
+            console.log('🚀 アプリ初期化開始');
+            
+            // 要素取得
+            elements.secondHand = document.getElementById('secondHand');
+            elements.minuteHand = document.getElementById('minuteHand');
+            elements.nextStart = document.getElementById('nextStart');
+            elements.menuStart = document.getElementById('menuStart');
+            elements.currentSet = document.getElementById('currentSet');
+            elements.totalSets = document.getElementById('totalSets');
+            elements.displayCycle = document.getElementById('displayCycle');
+            elements.displaySwimmers = document.getElementById('displaySwimmers');
+            elements.displayInterval = document.getElementById('displayInterval');
+            elements.syncBtn = document.getElementById('syncBtn');
+            elements.startBtn = document.getElementById('startBtn');
+            elements.settings = document.getElementById('settings');
+            elements.minuteSlider = document.getElementById('minuteSlider');
+            elements.minuteValue = document.getElementById('minuteValue');
+            elements.cycleMins = document.getElementById('cycleMins');
+            elements.cycleSecs = document.getElementById('cycleSecs');
+            elements.swimmers = document.getElementById('swimmers');
+            elements.interval = document.getElementById('interval');
+            elements.sets = document.getElementById('sets');
+            elements.voice10sec = document.getElementById('voice10sec');
+            elements.voice5sec = document.getElementById('voice5sec');
+            elements.voiceSetNumber = document.getElementById('voiceSetNumber');
+            
+            // 要素取得確認
+            console.log('🔍 要素取得確認:');
+            console.log('  - startBtn:', elements.startBtn);
+            console.log('  - syncBtn:', elements.syncBtn);
+            
+            // イベントリスナー
+            elements.minuteSlider.addEventListener('input', (e) => {
+                const minuteValue = parseInt(e.target.value);
+                state.minutePosition = minuteValue; // state に反映
+                elements.minuteValue.textContent = minuteValue;
+                // 分針を即座に更新（いつでも反映）
+                const minuteDegrees = minuteValue * 6;
+                elements.minuteHand.style.transform = `rotate(${minuteDegrees}deg)`;
+                console.log('🔵 分針スライダー変更:', minuteValue, '度:', minuteDegrees);
+            });
+            elements.cycleMins.addEventListener('change', updateDisplay);
+            elements.cycleSecs.addEventListener('change', updateDisplay);
+            elements.swimmers.addEventListener('change', updateDisplay);
+            elements.interval.addEventListener('change', updateDisplay);
+            elements.sets.addEventListener('change', updateDisplay);
+            
+            elements.syncBtn.addEventListener('click', () => {
+                console.log('🔵 秒針スタートボタンクリック');
+                syncClock();
+            });
+            elements.startBtn.addEventListener('click', () => {
+                console.log('🟠 ボタンクリック - menuRunning:', state.menuRunning, 'menuWaiting:', state.menuWaiting);
+                if (!state.menuRunning && !state.menuWaiting) {
+                    console.log('🔴 メニュー開始ボタンクリック');
+                    startMenu();
+                } else {
+                    console.log('⛔ メニュー停止ボタンクリック');
+                    stopMenu();
+                }
+            });
+            
+            document.getElementById('saveMenuBtn').addEventListener('click', saveMenu);
+            
+            updateDisplay();
+            loadSavedMenus();
+            
+            console.log('✅ 初期化完了');
+        }
+        
+        // ========================================
+        // 表示更新
+        // ========================================
+        function updateDisplay() {
+            const mins = parseInt(elements.cycleMins.value);
+            const secs = parseInt(elements.cycleSecs.value);
+            elements.displayCycle.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            elements.displaySwimmers.textContent = elements.swimmers.value;
+            elements.displayInterval.textContent = elements.interval.value + '秒';
+            
+            // 残り本数の総本数を更新
+            const totalSets = parseInt(elements.sets.value);
+            elements.totalSets.textContent = totalSets;
+        }
+        
+        // ========================================
+        // アニメーションループ
+        // ========================================
+        function tick() {
+            if (!state.clockRunning) return;
+            
+            const totalSeconds = (Date.now() - state.clockStartMs) / 1000;
+            
+            // 秒針
+            const seconds = totalSeconds % 60;
+            const secondDegrees = seconds * 6;
+            elements.secondHand.style.transform = `rotate(${secondDegrees}deg)`;
+            
+            // 分針
+            const totalMinutes = state.minutePosition + (totalSeconds / 60);
+            const minuteDegrees = (totalMinutes % 60) * 6;
+            elements.minuteHand.style.transform = `rotate(${minuteDegrees}deg)`;
+            
+            // メニュー実行中の処理
+            if (state.menuRunning) {
+                // メニュー開始地点からの経過時間
+                const menuElapsed = totalSeconds - state.menuStartElapsed;
+                
+                // イベント処理
+                state.events = state.events.filter(event => {
+                    if (menuElapsed >= event.sec) {
+                        console.log(`🔔 イベント発火: ${event.sec}秒 (menuElapsed: ${menuElapsed.toFixed(1)}秒)`);
+                        event.func();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            
+            // カウントダウン更新
+            if (state.menuRunning && state.cycleTime > 0) {
+                // メニュー開始地点からの経過時間
+                const menuElapsed = totalSeconds - state.menuStartElapsed;
+                const currentInCycle = menuElapsed % state.cycleTime;
+                const nextStartIn = state.cycleTime - currentInCycle;
+                elements.nextStart.textContent = Math.ceil(nextStartIn) + '秒';
+                elements.menuStart.textContent = '--';
+            } else if (!state.menuWaiting) {
+                // menuWaiting=true の間は startMenu 内のカウントダウンが動作中なので上書きしない
+                elements.nextStart.textContent = '--';
+                elements.menuStart.textContent = '--';
+            }
+            
+            requestAnimationFrame(tick);
+        }
+        
+        // ========================================
+        // 秒針スタート
+        // ========================================
+        function syncClock() {
+            console.log('🔵 秒針同期');
+            
+            // 初回のAudioContext初期化
+            if (!globalAudioContext) {
+                try {
+                    globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('✅ グローバルAudioContext初期化成功');
+                    // テスト音を鳴らす（iOSのロック解除）
+                    const testOscillator = globalAudioContext.createOscillator();
+                    const testGain = globalAudioContext.createGain();
+                    testGain.gain.value = 0;
+                    testOscillator.connect(testGain);
+                    testGain.connect(globalAudioContext.destination);
+                    testOscillator.start();
+                    testOscillator.stop(globalAudioContext.currentTime + 0.001);
+                    console.log('✅ AudioContextロック解除成功');
+                } catch (e) {
+                    console.log('⚠️ AudioContext初期化失敗:', e);
+                }
+            }
+            
+            if (!state.clockRunning && 'speechSynthesis' in window) {
+                const dummyUtterance = new SpeechSynthesisUtterance('');
+                dummyUtterance.volume = 0;
+                speechSynthesis.speak(dummyUtterance);
+            }
+            
+            // 秒針を再同期（いつでも実行可能）
+            state.clockRunning = true;
+            state.clockStartMs = Date.now();
+            state.minutePosition = parseInt(elements.minuteSlider.value);
+            
+            elements.syncBtn.textContent = '秒針を同期';
+            elements.syncBtn.className = 'btn btn-blue';
+            elements.syncBtn.disabled = false;
+            elements.startBtn.disabled = false;
+            
+            if (!state.tickRunning) {
+                state.tickRunning = true;
+                tick();
+            }
+            
+            console.log('✅ 秒針同期完了');
+        }
+        
+        // ========================================
+        // メニュー開始
+        // ========================================
+        function startMenu() {
+            console.log('🔴 メニュー開始');
+            
+            if (!state.clockRunning) {
+                alert('先に秒針スタートを押してください');
+                return;
+            }
+            
+            state.cycleTime = parseInt(elements.cycleMins.value) * 60 + parseInt(elements.cycleSecs.value);
+            const swimmers = parseInt(elements.swimmers.value);
+            const interval = parseInt(elements.interval.value);
+            const sets = parseInt(elements.sets.value);
+            
+            if (state.cycleTime < swimmers * interval) {
+                alert('サークルタイムが短すぎます');
+                return;
+            }
+            
+            const currentElapsed = (Date.now() - state.clockStartMs) / 1000;
+            const currentSecond = currentElapsed % 60;
+            const waitSeconds = currentSecond < 0.5 ? 0 : 60 - currentSecond;
+            const nextZeroElapsed = Math.ceil(currentElapsed / 60) * 60;
+            
+            console.log('📍 待機時間:', waitSeconds, '秒');
+            
+            // 1本目1組目の音声・ビープをスケジュール
+            if (waitSeconds >= 10) {
+                const t10 = setTimeout(() => {
+                    if (state.menuWaiting) {
+                        elements.currentSet.textContent = '1';
+                        if (elements.voice10sec.checked) {
+                            speak('10秒前');
+                        }
+                    }
+                }, (waitSeconds - 10) * 1000);
+                state.timerIds.push(t10);
+            }
+            
+            if (waitSeconds >= 5) {
+                const t5 = setTimeout(() => {
+                    if (state.menuWaiting) {
+                        if (elements.voice5sec.checked) {
+                            speak('5秒前');
+                        }
+                    }
+                }, (waitSeconds - 5) * 1000);
+                state.timerIds.push(t5);
+            }
+            
+            // ボタンを即座に「メニュー停止」に変更
+            elements.startBtn.textContent = 'メニュー停止';
+            elements.startBtn.classList.remove('btn-red');
+            elements.startBtn.classList.add('btn-gray');
+            console.log('🔴 ボタン変更: メニュー停止 (グレー)', elements.startBtn.className);
+            
+            // 設定欄を即座に非表示
+            elements.settings.classList.add('hidden');
+            
+            // 1本目1組目の3・2・1ビープをスケジュール
+            if (waitSeconds >= 3) {
+                const t3 = setTimeout(() => {
+                    if (state.menuWaiting) {
+                        console.log('🔔 ビープ: 1本目1組目 3秒前');
+                        beepCountdown();
+                    }
+                }, (waitSeconds - 3) * 1000);
+                state.timerIds.push(t3);
+            }
+            if (waitSeconds >= 2) {
+                const t2 = setTimeout(() => {
+                    if (state.menuWaiting) {
+                        console.log('🔔 ビープ: 1本目1組目 2秒前');
+                        beepCountdown();
+                    }
+                }, (waitSeconds - 2) * 1000);
+                state.timerIds.push(t2);
+            }
+            if (waitSeconds >= 1) {
+                const t1 = setTimeout(() => {
+                    if (state.menuWaiting) {
+                        console.log('🔔 ビープ: 1本目1組目 1秒前');
+                        beepCountdown();
+                    }
+                }, (waitSeconds - 1) * 1000);
+                state.timerIds.push(t1);
+            }
+            
+            // 1本目1組目の0秒スタート音をスケジュール
+            const t0 = setTimeout(() => {
+                if (state.menuWaiting) {
+                    console.log('🟢 スタート: 1本目1組目 (startMenuから)');
+                    beepStart();
+                }
+            }, waitSeconds * 1000);
+            state.timerIds.push(t0);
+            
+            // 「メニュー開始まで」カウントダウン
+            state.menuWaiting = true;
+            const menuCountdownInterval = setInterval(() => {
+                if (!state.menuWaiting) {
+                    clearInterval(menuCountdownInterval);
+                    return;
+                }
+                const elapsed = (Date.now() - state.clockStartMs) / 1000;
+                const currentSec = elapsed % 60;
+                const remaining = (currentSec < 0.5) ? 0 : 60 - currentSec;
+                elements.menuStart.textContent = Math.ceil(remaining) + '秒';
+            }, 100);
+            state.timerIds.push(menuCountdownInterval);
+            
+            const tFinal = setTimeout(() => {
+                state.menuWaiting = false;
+                clearInterval(menuCountdownInterval);
+                
+                // メニュー開始までを -- に設定
+                elements.menuStart.textContent = '--';
+                
+                state.menuStartElapsed = nextZeroElapsed;
+                state.menuRunning = true;
+            elements.syncBtn.disabled = true;  // メニュー実行中は同期を禁止
+                state.events = [];
+                
+                elements.syncBtn.disabled = true;
+                elements.settings.classList.add('hidden');
+                elements.totalSets.textContent = `/ ${sets}`;
+                
+                scheduleEvents(sets, swimmers, interval);
+                
+                console.log('✅ メニュー開始');
+                
+            }, waitSeconds * 1000);
+            state.timerIds.push(tFinal);
+        }
+        
+        // ========================================
+        // イベントスケジューリング
+        // ========================================
+        function scheduleEvents(sets, swimmers, interval) {
+            console.log('🟡 scheduleEvents呼び出し:', sets, '本', swimmers, '組', interval, '秒間隔');
+            for (let set = 1; set <= sets; set++) {
+                const isFirst = (set === 1);
+                const isLast = (set === sets);
+                // メニュー開始地点（0秒）からの相対時間
+                const setStartSec = (set - 1) * state.cycleTime;
+                
+                // 2本目以降: 本数コール（-12秒）
+                if (set > 1) {
+                    state.events.push({
+                        sec: setStartSec - 12,
+                        func: () => {
+                            if (elements.voiceSetNumber.checked) {
+                                speak(isLast ? 'ラスト' : `${set}本目`);
+                            }
+                        }
+                    });
+                    
+                    // 2本目以降: 10秒前コール
+                    state.events.push({
+                        sec: setStartSec - 10,
+                        func: () => {
+                            elements.currentSet.textContent = String(set);
+                            if (elements.voice10sec.checked) {
+                                speak('10秒前');
+                            }
+                        }
+                    });
+                    
+                    // 2本目以降: 5秒前コール
+                    state.events.push({
+                        sec: setStartSec - 5,
+                        func: () => {
+                            if (elements.voice5sec.checked) {
+                                speak('5秒前');
+                            }
+                        }
+                    });
+                }
+                
+                // 各組のスタート（3・2・1ビープ + スタート）
+                for (let i = 1; i <= swimmers; i++) {
+                    const swimmerStartSec = setStartSec + (i - 1) * interval;
+                    
+                    // 1本目1組目は startMenu() で処理済みのためスキップ
+                    if (set === 1 && i === 1) {
+                        continue;
+                    }
+                    
+                    // 3・2・1ビープ（高音・短い予告音）
+                    for (let countdown = 3; countdown >= 1; countdown--) {
+                        state.events.push({
+                            sec: swimmerStartSec - countdown,
+                            func: () => {
+                                console.log(`🔔 ビープ: ${set}本目${i}組目 ${countdown}秒前`);
+                                beepCountdown();
+                            }
+                        });
+                    }
+                    
+                    // スタートビープ（0秒用の特別な音）
+                    state.events.push({
+                        sec: swimmerStartSec,
+                        func: () => {
+                            console.log(`🟢 スタート: ${set}本目${i}組目`);
+                            beepStart(); // 低音・長い・大きいスタート音
+                            // 音声「スタート」は削除（ブザー音と被るため）
+                        }
+                    });
+                }
+            }
+            
+            // 全本数完了
+            const lastSetEnd = sets * state.cycleTime;
+            state.events.push({
+                sec: lastSetEnd,
+                func: () => {
+                    beepLarge(); // 大きめのビープ音
+                    setTimeout(stopMenu, 2000);
+                }
+            });
+            
+            state.events.sort((a, b) => a.sec - b.sec);
+            console.log('📝 イベント登録完了:', state.events.length, '個');
+        }
+        
+        // ========================================
+        // 停止
+        // ========================================
+        function stopMenu() {
+            console.log('⛔ stopMenu 呼び出し - タイマー数:', state.timerIds.length);
+            
+            // すべてのタイマーをクリア
+            state.timerIds.forEach((id, index) => {
+                clearTimeout(id);
+                clearInterval(id);
+                console.log(`✅ タイマー ${index + 1} をクリア`);
+            });
+            state.timerIds = [];
+            console.log('✅ すべてのタイマーをクリア完了');
+            
+            state.menuRunning = false;
+            elements.syncBtn.disabled = false;  // メニュー停止で同期を再許可
+            state.menuWaiting = false;
+            state.events = [];
+            
+            elements.startBtn.textContent = 'メニュー開始';
+            elements.startBtn.classList.remove('btn-gray');
+            elements.startBtn.classList.add('btn-red');
+            console.log('🔴 ボタン変更: メニュー開始 (赤)', elements.startBtn.className);
+            elements.settings.classList.remove('hidden');
+            elements.syncBtn.disabled = false;
+            
+            elements.currentSet.textContent = '-';
+            elements.totalSets.textContent = '/ -';
+            
+            // カウントダウン枠をリセット
+            elements.nextStart.textContent = '--';
+            elements.menuStart.textContent = '--';
+            
+            console.log('⛔ メニュー停止');
+        }
+        
+        // ========================================
+        // 音声合成
+        // ========================================
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ja-JP';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                speechSynthesis.speak(utterance);
+                console.log('🔊 音声:', text);
+            }
+        }
+        
+        // ========================================
+        // カウントダウンビープ音（3・2・1秒前用）
+        // ========================================
+        function beepCountdown() {
+            console.log("🔔 beepCountdown呼び出し");
+            if (globalAudioContext) {
+                const audioContext = globalAudioContext;
+                
+                // メイン音（400Hz、より低く太い）
+                const osc1 = audioContext.createOscillator();
+                const gain1 = audioContext.createGain();
+                osc1.frequency.value = 400;
+                osc1.type = 'square';
+                osc1.connect(gain1);
+                gain1.connect(audioContext.destination);
+                gain1.gain.setValueAtTime(0.7, audioContext.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+                
+                // 倍音（800Hz、厚みを出す）
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.frequency.value = 800;
+                osc2.type = 'sawtooth';
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+                
+                osc1.start(audioContext.currentTime);
+                osc1.stop(audioContext.currentTime + 0.08);
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 0.08);
+                
+                console.log('🔔 ビープ（3・2・1）- ダブルオシレーター: 400Hz+800Hz 0.08秒');
+            }
+        }
+        
+        // ========================================
+        // スタートビープ音（0秒用）
+        // ========================================
+        function beepStart() {
+            if (globalAudioContext) {
+                const audioContext = globalAudioContext;
+                
+                // メイン音（400Hz、より低く太い）
+                const osc1 = audioContext.createOscillator();
+                const gain1 = audioContext.createGain();
+                osc1.frequency.value = 400;
+                osc1.type = 'square';
+                osc1.connect(gain1);
+                gain1.connect(audioContext.destination);
+                gain1.gain.setValueAtTime(0.7, audioContext.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
+                
+                // 倍音（800Hz、厚みを出す）
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.frequency.value = 800;
+                osc2.type = 'sawtooth';
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
+                
+                osc1.start(audioContext.currentTime);
+                osc1.stop(audioContext.currentTime + 0.7);
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 0.7);
+                
+                console.log('🔊 スタートビープ（0秒）- ダブルオシレーター: 400Hz+800Hz 0.7秒');
+            }
+        }
+        
+        // ========================================
+        // 大きめのビープ音（全本数完了用）
+        // ========================================
+        function beepLarge() {
+            if (globalAudioContext) {
+                const audioContext = globalAudioContext;
+                
+                // メイン音（350Hz、より低く太い）
+                const osc1 = audioContext.createOscillator();
+                const gain1 = audioContext.createGain();
+                osc1.frequency.value = 350;
+                osc1.type = 'square';
+                osc1.connect(gain1);
+                gain1.connect(audioContext.destination);
+                gain1.gain.setValueAtTime(0.7, audioContext.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.2);
+                
+                // 倍音（700Hz、厚みを出す）
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.frequency.value = 700;
+                osc2.type = 'sawtooth';
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.2);
+                
+                osc1.start(audioContext.currentTime);
+                osc1.stop(audioContext.currentTime + 1.2);
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 1.2);
+                
+                console.log('🔊 大きめビープ（全本数完了）- ダブルオシレーター: 350Hz+700Hz 1.2秒');
+            }
+        }
+        
+        // ========================================
+        // ブザー音パターン（5種類）
+        // ========================================
+        
+        // パターンA: 高音・短い（電子ブザー風）
+        function testBeepA() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain).connect(ctx.destination);
+            osc.frequency.value = 2000; // 高音
+            osc.type = 'square';
+            gain.gain.setValueAtTime(1.0, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+            console.log('🔊 パターンA: 2000Hz square 0.1秒');
+        }
+        
+        // パターンB: 中音・短い（ピー音）
+        function testBeepB() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain).connect(ctx.destination);
+            osc.frequency.value = 1000;
+            osc.type = 'square';
+            gain.gain.setValueAtTime(1.0, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+            console.log('🔊 パターンB: 1000Hz square 0.15秒');
+        }
+        
+        // パターンC: 低音・長い（ブー音）
+        function testBeepC() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain).connect(ctx.destination);
+            osc.frequency.value = 600;
+            osc.type = 'square';
+            gain.gain.setValueAtTime(1.0, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+            console.log('🔊 パターンC: 600Hz square 0.3秒');
+        }
+        
+        // パターンD: サイレン風（周波数変化）
+        function testBeepD() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain).connect(ctx.destination);
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.2);
+            osc.type = 'square';
+            gain.gain.setValueAtTime(1.0, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+            console.log('🔊 パターンD: 800-1200Hz square 0.2秒 （サイレン）');
+        }
+        
+        // パターンE: 2音連続（ピッピッ）
+        function testBeepE() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 1音目
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.connect(gain1).connect(ctx.destination);
+            osc1.frequency.value = 1500;
+            osc1.type = 'square';
+            gain1.gain.setValueAtTime(1.0, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+            osc1.start(ctx.currentTime);
+            osc1.stop(ctx.currentTime + 0.08);
+            
+            // 2音目
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.connect(gain2).connect(ctx.destination);
+            osc2.frequency.value = 1500;
+            osc2.type = 'square';
+            gain2.gain.setValueAtTime(1.0, ctx.currentTime + 0.12);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc2.start(ctx.currentTime + 0.12);
+            osc2.stop(ctx.currentTime + 0.2);
+            
+            console.log('🔊 パターンE: 1500Hz x2 square （ピッピッ）');
+        }
+        
+        // ========================================
+        // メニュー保存・読み込み
+        // ========================================
+        
+        function saveMenu() {
+            const menuName = prompt('メニュー名を入力してください（例: 50m×10本、100m×5本）');
+            if (!menuName || menuName.trim() === '') {
+                return;
+            }
+            
+            const menuData = {
+                name: menuName.trim(),
+                cycleMins: parseInt(elements.cycleMins.value),
+                cycleSecs: parseInt(elements.cycleSecs.value),
+                swimmers: parseInt(elements.swimmers.value),
+                interval: parseInt(elements.interval.value),
+                sets: parseInt(elements.sets.value),
+                voice10sec: elements.voice10sec.checked,
+                voice5sec: elements.voice5sec.checked,
+                voiceSetNumber: elements.voiceSetNumber.checked
+            };
+            
+            let savedMenus = JSON.parse(localStorage.getItem('swimTimerMenus') || '[]');
+            savedMenus.push(menuData);
+            localStorage.setItem('swimTimerMenus', JSON.stringify(savedMenus));
+            
+            alert(`「${menuName}」を保存しました！`);
+            loadSavedMenus();
+        }
+        
+        function loadMenu(index) {
+            const savedMenus = JSON.parse(localStorage.getItem('swimTimerMenus') || '[]');
+            const menu = savedMenus[index];
+            if (!menu) return;
+            
+            elements.cycleMins.value = menu.cycleMins;
+            elements.cycleSecs.value = menu.cycleSecs;
+            elements.swimmers.value = menu.swimmers;
+            elements.interval.value = menu.interval;
+            elements.sets.value = menu.sets;
+            elements.voice10sec.checked = menu.voice10sec;
+            elements.voice5sec.checked = menu.voice5sec;
+            elements.voiceSetNumber.checked = menu.voiceSetNumber;
+            
+            updateDisplay();
+            alert(`「${menu.name}」を読み込みました！`);
+        }
+        
+        function deleteMenu(index) {
+            const savedMenus = JSON.parse(localStorage.getItem('swimTimerMenus') || '[]');
+            const menu = savedMenus[index];
+            if (!menu) return;
+            
+            if (confirm(`「${menu.name}」を削除しますか？`)) {
+                savedMenus.splice(index, 1);
+                localStorage.setItem('swimTimerMenus', JSON.stringify(savedMenus));
+                loadSavedMenus();
+            }
+        }
+        
+        function loadSavedMenus() {
+            const savedMenus = JSON.parse(localStorage.getItem('swimTimerMenus') || '[]');
+            const container = document.getElementById('savedMenusContainer');
+            const list = document.getElementById('savedMenusList');
+            
+            if (savedMenus.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            list.innerHTML = '';
+            
+            savedMenus.forEach((menu, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-blue';
+                btn.style.cssText = 'padding: 8px 12px; font-size: 13px; position: relative;';
+                btn.innerHTML = `
+                    ${menu.name}
+                    <span style="position: absolute; top: -5px; right: -5px; background: #d02626; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); deleteMenu(${index})">×</span>
+                `;
+                btn.onclick = () => loadMenu(index);
+                list.appendChild(btn);
+            });
+        }
+        
+        // ========================================
+        // 起動
+        // ========================================
+        window.addEventListener('load', initialize);
+    </script>
+</body>
+</html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
